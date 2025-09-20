@@ -18,8 +18,9 @@ function App() {
   const [directions, setDirections] = useState(null);
   const [steps, setSteps] = useState([]);
   const [user, setUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true); // Adicionar estado de loading inicial
+  const [authLoading, setAuthLoading] = useState(true);
   const [savedRoutes, setSavedRoutes] = useState([]);
+  const [loadingRoutes, setLoadingRoutes] = useState(false); // Novo estado
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showSavedRoutes, setShowSavedRoutes] = useState(false);
@@ -52,10 +53,15 @@ function App() {
 
   const loadUserRoutes = async (userId) => {
     try {
+      setLoadingRoutes(true); // Iniciar loading
+      console.log('🔍 LOAD: Carregando roteiros para:', userId);
       const routes = await getUserRoutes(userId);
+      console.log('🔍 LOAD: Roteiros carregados:', routes.length);
       setSavedRoutes(routes);
     } catch (error) {
-      console.error('Erro ao carregar roteiros:', error);
+      console.error('❌ LOAD: Erro:', error);
+    } finally {
+      setLoadingRoutes(false); // Finalizar loading
     }
   };
 
@@ -310,7 +316,8 @@ function App() {
     });
   };
 
-  // Função de teste da base de dados
+  // Função de teste da base de dados - temporariamente suspensa
+  /*
   const testDatabaseConnection = async () => {
     try {
       console.log('🧪 TESTE: Testando conexão com Firebase...');
@@ -355,6 +362,7 @@ function App() {
       alert('❌ Erro no teste de conexão: ' + error.message);
     }
   };
+  */
 
   return (
     <>
@@ -406,9 +414,10 @@ function App() {
                       <button 
                         className="menu-item"
                         onClick={async () => {
-                          if (!showSavedRoutes && user) {
-                            console.log('🔍 Carregando roteiros salvos...');
-                            await loadUserRoutes(user.uid);
+                          console.log('🔍 BOTÃO: Forçando recarregamento de roteiros');
+                          if (user) {
+                            console.log('🔍 BOTÃO: user.uid:', user.uid);
+                            await loadUserRoutes(user.uid); // SEMPRE recarregar
                           }
                           setShowSavedRoutes(!showSavedRoutes);
                           setShowMenu(false);
@@ -431,6 +440,7 @@ function App() {
                       <button className="menu-item">
                         ⚙️ Configurações
                       </button>
+                      {/* Botão de teste temporariamente suspenso
                       {process.env.NODE_ENV === 'development' && (
                         <button 
                           className="menu-item"
@@ -440,6 +450,7 @@ function App() {
                           🧪 Testar BD
                         </button>
                       )}
+                      */}
                       <div className="menu-divider"></div>
                       <button 
                         className="menu-item logout-item"
@@ -455,35 +466,51 @@ function App() {
 
             {showSavedRoutes && (
               <div className="saved-routes-panel">
-                <h3>Roteiros Salvos</h3>
-                {savedRoutes.length === 0 ? (
-                  <p>Nenhum roteiro salvo ainda.</p>
+                <div className="saved-routes-header">
+                  <h3>Roteiros Salvos</h3>
+                  <button 
+                    onClick={() => setShowSavedRoutes(false)}
+                    className="close-panel-btn"
+                    title="Fechar"
+                  >
+                    ✕
+                  </button>
+                </div>
+                {loadingRoutes ? (
+                  <p>🔄 Carregando roteiros...</p>
+                ) : savedRoutes.length === 0 ? (
+                  <div>
+                    <p>Nenhum roteiro salvo ainda.</p>
+                  </div>
                 ) : (
-                  savedRoutes.map((route) => (
-                    <div key={route.id} className="saved-route-item">
-                      <div className="route-info">
-                        <h4>{route.name}</h4>
-                        <p>{route.places.length} locais • {route.travelMode}</p>
-                        <small>Criado em: {new Date(route.createdAt.seconds * 1000).toLocaleDateString()}</small>
+                  <div>
+                    <p>📊 {savedRoutes.length} roteiro(s) encontrado(s)</p>
+                    {savedRoutes.map((route) => (
+                      <div key={route.id} className="saved-route-item">
+                        <div className="route-info">
+                          <h4>{route.name}</h4>
+                          <p>{route.places?.length || 0} locais • {route.travelMode}</p>
+                          <small>Criado em: {route.createdAt ? new Date(route.createdAt.seconds * 1000).toLocaleDateString() : 'Data não disponível'}</small>
+                        </div>
+                        <div className="route-actions">
+                          <button 
+                            onClick={() => handleLoadRoute(route)} 
+                            className="load-btn"
+                            title="Carregar Roteiro"
+                          >
+                            📂
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteRoute(route.id)} 
+                            className="delete-btn"
+                            title="Excluir Roteiro"
+                          >
+                            🗑️
+                          </button>
+                        </div>
                       </div>
-                      <div className="route-actions">
-                        <button 
-                          onClick={() => handleLoadRoute(route)} 
-                          className="load-btn"
-                          title="Carregar Roteiro"
-                        >
-                          📂
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteRoute(route.id)} 
-                          className="delete-btn"
-                          title="Excluir Roteiro"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </div>
-                  ))
+                    ))}
+                  </div>
                 )}
               </div>
             )}

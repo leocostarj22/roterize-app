@@ -92,15 +92,24 @@ export const deleteRoute = async (routeId) => {
 
 export const getUserRoutes = async (userId) => {
   try {
+    console.log('🔥 FIREBASE: Iniciando busca para userId:', userId);
     const q = query(routesCollection, where('userId', '==', userId), orderBy('createdAt', 'desc'));
+    
     const querySnapshot = await getDocs(q);
+    console.log('🔥 FIREBASE: Documentos encontrados:', querySnapshot.size);
+    
     const routes = [];
     querySnapshot.forEach((doc) => {
-      routes.push({ id: doc.id, ...doc.data() });
+      const data = doc.data();
+      const route = { id: doc.id, ...data };
+      console.log('🔥 FIREBASE: Roteiro:', route.name, 'ID:', doc.id);
+      routes.push(route);
     });
+    
+    console.log('🔥 FIREBASE: Retornando', routes.length, 'roteiros');
     return routes;
   } catch (error) {
-    console.error('Erro ao buscar roteiros do usuário:', error);
+    console.error('🔥 FIREBASE: Erro na busca:', error);
     throw error;
   }
 };

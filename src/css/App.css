@@ -472,6 +472,35 @@
   padding: 15px;
 }
 
+.saved-routes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.saved-routes-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.close-panel-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #666;
+  padding: 5px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.close-panel-btn:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
 .saved-route-item {
   display: flex;
   justify-content: space-between;
