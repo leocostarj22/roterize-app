@@ -1,70 +1,136 @@
-# Getting Started with Create React App
+# 🗺️ Roterize
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Um aplicativo web moderno para planejamento de rotas e navegação, desenvolvido com React e integração com Google Maps API.
 
-## Available Scripts
+## 📋 Sobre o Projeto
 
-In the project directory, you can run:
+O Roterize é uma aplicação web que permite aos usuários:
+- Buscar e adicionar locais usando autocomplete
+- Planejar rotas entre múltiplos pontos
+- Escolher diferentes modos de transporte (caminhada, carro, bicicleta, transporte público)
+- Visualizar direções detalhadas no mapa
+- Interface minimalista e profissional
 
-### `npm start`
+## 🚀 Tecnologias Utilizadas
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **React** - Biblioteca JavaScript para construção da interface
+- **Google Maps API** - Integração com mapas e serviços de localização
+- **@react-google-maps/api** - Componentes React para Google Maps
+- **CSS3** - Estilização com design minimalista
+- **JavaScript ES6+** - Funcionalidades modernas do JavaScript
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## 📦 Instalação
 
-### `npm test`
+### Pré-requisitos
+- Node.js (versão 14 ou superior)
+- npm ou yarn
+- Chave da API do Google Maps
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Passos para instalação
 
-### `npm run build`
+1. Clone o repositório:
+```bash
+git clone https://github.com/leocostarj22/roterize-app.git
+cd roterize-app
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+2. Instale as dependências:
+```bash
+npm install
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+3. Configure a API do Google Maps:
+   - Obtenha uma chave da API no [Google Cloud Console](https://console.cloud.google.com/)
+   - Ative as APIs: Maps JavaScript API, Places API, Directions API
+   - Adicione sua chave no arquivo de configuração
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+4. Inicie o servidor de desenvolvimento:
+```bash
+npm start
+```
 
-### `npm run eject`
+5. Acesse a aplicação em `http://localhost:3000`
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## 🎯 Funcionalidades
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### ✅ Implementadas
+- [x] Interface de usuário minimalista
+- [x] Busca de locais com autocomplete
+- [x] Adição de múltiplos pontos de interesse
+- [x] Seleção de modo de transporte
+- [x] Visualização de rotas no mapa
+- [x] Direções passo a passo
+- [x] Design responsivo
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### 🔄 Em Desenvolvimento
+- [ ] Salvamento de rotas favoritas
+- [ ] Compartilhamento de rotas
+- [ ] Estimativa de tempo e distância
+- [ ] Modo escuro
+- [ ] Suporte a múltiplos idiomas
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## 🎨 Design
 
-## Learn More
+O Roterize segue um design minimalista e profissional com:
+- Paleta de cores neutras
+- Tipografia limpa e legível
+- Espaçamentos consistentes
+- Elementos sem bordas arredondadas
+- Foco na usabilidade
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## 📱 Responsividade
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+A aplicação é totalmente responsiva e funciona em:
+- 💻 Desktop
+- 📱 Smartphones
+- 📟 Tablets
 
-### Code Splitting
+## 🛠️ Scripts Disponíveis
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+```bash
+npm start          # Inicia o servidor de desenvolvimento
+npm test           # Executa os testes
+npm run build      # Cria build de produção
+npm run eject      # Ejeta as configurações (irreversível)
+```
 
-### Analyzing the Bundle Size
+## 📂 Estrutura do Projeto
+roterize-app/
+├── public/
+│   ├── index.html
+│   └── manifest.json
+├── src/
+│   ├── App.js          # Componente principal
+│   ├── App.css         # Estilos principais
+│   ├── index.js        # Ponto de entrada
+│   └── roterize.png    # Logo da aplicação
+├── package.json
+└── README.md
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
 
-### Making a Progressive Web App
+## 🤝 Contribuição
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+1. Faça um fork do projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
 
-### Advanced Configuration
+## 📄 Licença
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 
-### Deployment
+## 👨‍💻 Autor
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+**Leonardo Costa**
+- GitHub: [@leocostarj22](https://github.com/leocostarj22)
 
-### `npm run build` fails to minify
+## 🙏 Agradecimentos
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- Google Maps API pela integração de mapas
+- React community pelas ferramentas e bibliotecas
+- Todos os contribuidores do projeto
+
+---
+
+⭐ Se este projeto te ajudou, considere dar uma estrela no repositório!
