@@ -81,7 +81,7 @@ function AddPlace({ onClose }) {
     }
   }, []);
 
-  // Função para buscar endereços (igual à página principal)
+  // Função para buscar endereços (agora global)
   const searchAddresses = (searchText) => {
     if (!window.google || !window.google.maps) {
       console.error('Google Maps API não carregada');
@@ -92,7 +92,8 @@ function AddPlace({ onClose }) {
     service.getPlacePredictions(
       {
         input: searchText,
-        componentRestrictions: { country: 'br' },
+        // Remover ou comentar a linha abaixo para permitir buscas globais
+        // componentRestrictions: { country: 'br' },
         types: ['establishment', 'geocode']
       },
       (predictions, status) => {

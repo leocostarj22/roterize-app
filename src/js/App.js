@@ -218,7 +218,8 @@ function App() {
     service.getPlacePredictions(
       {
         input: searchText,
-        componentRestrictions: { country: 'br' },
+        // Remover ou comentar a linha abaixo para permitir buscas globais
+        // componentRestrictions: { country: 'br' },
         types: ['establishment', 'geocode']
       },
       (predictions, status) => {
