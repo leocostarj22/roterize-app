@@ -3,14 +3,18 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: url('../img/mundi.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   padding: 20px;
 }
 
 .login-card {
   background: white;
   padding: 40px;
-  border-radius: 12px;
+  border-radius: 0px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   width: 100%;
   max-width: 400px;
@@ -92,7 +96,7 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: #e1e5e9;
+  background: none;
 }
 
 .divider span {

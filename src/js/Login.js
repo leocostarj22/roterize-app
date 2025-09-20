@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from './firebase';
-import './Login.css';
-import roterizelogo from './roterize.png';
+import '../css/Login.css';
+import roterizelogo from '../img/roterize.png';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -19,14 +19,16 @@ const Login = () => {
     try {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
-        console.log('Login com email realizado com sucesso');
+        console.log('✅ Login com email realizado com sucesso');
       } else {
         await createUserWithEmailAndPassword(auth, email, password);
-        console.log('Conta criada com sucesso');
+        console.log('✅ Conta criada com sucesso');
       }
-      setLoading(false); // Adicionar esta linha para parar o loading do botão
+      // Resetar loading imediatamente após sucesso
+      setLoading(false);
+      console.log('🔄 Loading resetado após login');
     } catch (error) {
-      console.error('Erro na autenticação:', error);
+      console.error('❌ Erro na autenticação:', error);
       setError(error.message);
       setLoading(false);
     }
@@ -39,10 +41,12 @@ const Login = () => {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-      console.log('Login com Google realizado com sucesso');
-      setLoading(false); // Adicionar esta linha para parar o loading do botão
+      console.log('✅ Login com Google realizado com sucesso');
+      // Resetar loading imediatamente após sucesso
+      setLoading(false);
+      console.log('🔄 Loading resetado após login Google');
     } catch (error) {
-      console.error('Erro no login com Google:', error);
+      console.error('❌ Erro no login com Google:', error);
       setError(error.message);
       setLoading(false);
     }
