@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from './firebase';
 import './Login.css';
 import roterizelogo from './roterize.png';
 
-const Login = ({ user, onAuthChange }) => {
+const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLogin, setIsLogin] = useState(true);
@@ -19,14 +19,17 @@ const Login = ({ user, onAuthChange }) => {
     try {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
+        console.log('Login com email realizado com sucesso');
       } else {
         await createUserWithEmailAndPassword(auth, email, password);
+        console.log('Conta criada com sucesso');
       }
-      onAuthChange();
+      setLoading(false); // Adicionar esta linha para parar o loading do botão
     } catch (error) {
+      console.error('Erro na autenticação:', error);
       setError(error.message);
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleGoogleLogin = async () => {
@@ -36,35 +39,14 @@ const Login = ({ user, onAuthChange }) => {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-      onAuthChange();
+      console.log('Login com Google realizado com sucesso');
+      setLoading(false); // Adicionar esta linha para parar o loading do botão
     } catch (error) {
+      console.error('Erro no login com Google:', error);
       setError(error.message);
-    }
-    setLoading(false);
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      onAuthChange();
-    } catch (error) {
-      setError(error.message);
+      setLoading(false);
     }
   };
-
-  if (user) {
-    return (
-      <div className="login-container">
-        <div className="login-card">
-          <h2>Bem-vindo ao Roterize</h2>
-          <p>Usuário: {user.email}</p>
-          <button onClick={handleLogout} className="logout-btn">
-            Sair
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="login-container">

@@ -3,7 +3,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './firebase';
 import Login from './Login';
 import './App.css';
-import { LoadScript, Autocomplete, GoogleMap, DirectionsRenderer } from '@react-google-maps/api';
+import { LoadScript, GoogleMap, DirectionsRenderer } from '@react-google-maps/api';
 import roterizelogo from './roterize.png';
 
 const libraries = ['places'];
@@ -12,24 +12,80 @@ function App() {
   const [input, setInput] = useState('');
   const [places, setPlaces] = useState([]);
   const [mode, setMode] = useState('WALKING');
-  const [autocomplete, setAutocomplete] = useState(null);
   const [directions, setDirections] = useState(null);
   const [steps, setSteps] = useState([]);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      console.log('Estado de autenticação mudou:', currentUser?.email || 'Nenhum usuário');
+      setUser(currentUser);
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
-  const handleAuthChange = () => {
-    // Força uma re-renderização após mudanças de autenticação
+  // Função para buscar sugestões usando Places API diretamente
+  const searchPlaces = async (query) => {
+    if (!query || query.length < 3) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    try {
+      if (window.google && window.google.maps && window.google.maps.places) {
+        const service = new window.google.maps.places.AutocompleteService();
+        
+        service.getPlacePredictions(
+          {
+            input: query,
+            types: ['establishment', 'geocode']
+          },
+          (predictions, status) => {
+            if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+              setSuggestions(predictions.slice(0, 5));
+              setShowSuggestions(true);
+            } else {
+              setSuggestions([]);
+              setShowSuggestions(false);
+            }
+          }
+        );
+      }
+    } catch (error) {
+      console.error('Erro ao buscar sugestões:', error);
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
   };
+
+  // Debounce para evitar muitas chamadas à API
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      searchPlaces(input);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [input]);
+
+  // Mostrar tela de loading
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div>Carregando...</div>
+      </div>
+    );
+  }
+
+  // Mostrar tela de login se não estiver autenticado
+  if (!user) {
+    return <Login />;
+  }
 
   const handleLogout = async () => {
     try {
@@ -39,22 +95,22 @@ function App() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div>Carregando...</div>
-      </div>
-    );
-  }
+  const handleInputChange = (e) => {
+    setInput(e.target.value);
+  };
 
-  if (!user) {
-    return <Login user={user} onAuthChange={handleAuthChange} />;
-  }
+  const handleSuggestionClick = (suggestion) => {
+    setInput(suggestion.description);
+    setSuggestions([]);
+    setShowSuggestions(false);
+  };
 
   const handleAddPlace = () => {
     if (input.trim()) {
       setPlaces([...places, input]);
       setInput('');
+      setSuggestions([]);
+      setShowSuggestions(false);
     }
   };
 
@@ -102,8 +158,8 @@ function App() {
       <div className="app-container">
         <div className="header">
           <div className="header-left">
-            <button className="back-btn"onClick={handleLogout} title="Sair">←</button>
-            <img src={roterizelogo} alt="Roterize" className="logo-image" />
+            <button className="back-btn" onClick={handleLogout} title="Sair">←</button>
+            <img src={roterizelogo} alt="Roterize" className="logomarca" />
           </div>
           <div className="header-right">
             <button className="notification-btn">🔔</button>
@@ -117,28 +173,33 @@ function App() {
               <button className="filter-btn">Filtros</button>
             </div>
             
-            <div className="input-container">
-              <Autocomplete
-                onLoad={setAutocomplete}
-                onPlaceChanged={() => {
-                  if (autocomplete !== null) {
-                    const place = autocomplete.getPlace();
-                    if (place && (place.formatted_address || place.name)) {
-                      setInput(place.formatted_address || place.name);
-                    }
-                  }
-                }}
-              >
-                <input
-                  type="text"
-                  placeholder="Insira um local"
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  className="input-local"
-                  autoComplete="off"
-                />
-              </Autocomplete>
+            <div className="input-container" style={{ position: 'relative' }}>
+              <input
+                type="text"
+                placeholder="Insira um local"
+                value={input}
+                onChange={handleInputChange}
+                className="input-local"
+                autoComplete="off"
+                onFocus={() => input.length >= 3 && setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+              />
               <div className="location-icon">📍</div>
+              
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="suggestions-dropdown">
+                  {suggestions.map((suggestion, index) => (
+                    <div
+                      key={suggestion.place_id}
+                      className="suggestion-item"
+                      onClick={() => handleSuggestionClick(suggestion)}
+                    >
+                      <span className="suggestion-icon">📍</span>
+                      <span className="suggestion-text">{suggestion.description}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             
             <button onClick={handleAddPlace} className="btn-gerar-roteiro">Adicionar Local</button>
@@ -150,71 +211,77 @@ function App() {
               {places.map((place, idx) => (
                 <div key={idx} className="local-item">
                   <span>{place}</span>
-                  <button
-                    className="btn-remover"
-                    onClick={() => handleRemovePlace(idx)}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M3 6H5H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M10 11V17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M14 11V17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </button>
+                  <button onClick={() => handleRemovePlace(idx)} className="remove-btn">×</button>
                 </div>
               ))}
             </div>
           )}
 
-          <div className="routes-section">
-            <div className="routes-header">
-              <h3>Modo de Viagem</h3>
-            </div>
-            
-            <div className="transport-tabs">
-              <button 
-                className={`transport-tab ${mode === 'WALKING' ? 'active' : ''}`}
-                onClick={() => setMode('WALKING')}
-              >
-                🚶 A pé
+          {places.length >= 2 && (
+            <div className="route-options">
+              <h4>Opções de Roteiro:</h4>
+              <div className="mode-selector">
+                <label>
+                  <input
+                    type="radio"
+                    value="WALKING"
+                    checked={mode === 'WALKING'}
+                    onChange={e => setMode(e.target.value)}
+                  />
+                  🚶 Caminhada
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    value="DRIVING"
+                    checked={mode === 'DRIVING'}
+                    onChange={e => setMode(e.target.value)}
+                  />
+                  🚗 Carro
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    value="TRANSIT"
+                    checked={mode === 'TRANSIT'}
+                    onChange={e => setMode(e.target.value)}
+                  />
+                  🚌 Transporte Público
+                </label>
+              </div>
+              <button onClick={handleGenerateRoute} className="btn-gerar-roteiro">
+                Gerar Roteiro
               </button>
-              <button 
-                className={`transport-tab ${mode === 'DRIVING' ? 'active' : ''}`}
-                onClick={() => setMode('DRIVING')}
-              >
-                🚗 Carro
-              </button>
             </div>
-            
-            <button onClick={handleGenerateRoute} className="btn-gerar-roteiro">
-              Gerar Roteiro Otimizado
-            </button>
-          </div>
+          )}
 
           {directions && (
-            <div className="routes-section">
-              <h3>Mapa do Roteiro</h3>
-              <div className="mapa-container">
-                <GoogleMap
-                  mapContainerStyle={{ height: '300px', width: '100%' }}
-                  zoom={13}
-                  center={{
-                    lat: directions.routes[0].legs[0].start_location.lat(),
-                    lng: directions.routes[0].legs[0].start_location.lng(),
-                  }}
-                >
-                  <DirectionsRenderer directions={directions} />
-                </GoogleMap>
-              </div>
-              
-              <h4>Resumo do Roteiro</h4>
+            <div className="map-container">
+              <GoogleMap
+                mapContainerStyle={{ width: '100%', height: '400px' }}
+                center={{ lat: -14.235, lng: -51.9253 }}
+                zoom={5}
+              >
+                <DirectionsRenderer directions={directions} />
+              </GoogleMap>
+            </div>
+          )}
+
+          {steps.length > 0 && (
+            <div className="steps-container">
+              <h4>Roteiro Detalhado:</h4>
               {steps.map((step, idx) => (
-                <div key={idx} className="route-item">
-                  <div className="route-icon">{idx + 1}</div>
-                  <div className="route-details">
-                    <div className="route-number">{step.start} → {step.end}</div>
-                    <div className="route-time">Tempo: {step.duration}</div>
-                    <div className="route-departure">Distância: {step.distance}</div>
+                <div key={idx} className="step-item">
+                  <div className="step-number">{idx + 1}</div>
+                  <div className="step-details">
+                    <div className="step-route">
+                      <strong>De:</strong> {step.start} <br />
+                      <strong>Para:</strong> {step.end}
+                    </div>
+                    <div className="step-info">
+                      <span className="distance">📏 {step.distance}</span>
+                      <span className="duration">⏱️ {step.duration}</span>
+                    </div>
                   </div>
                 </div>
               ))}
