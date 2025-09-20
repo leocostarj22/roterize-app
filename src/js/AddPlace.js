@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { auth, addPlace, uploadPhoto } from './firebase';
-import { GoogleMap, LoadScript, Marker, Autocomplete } from '@react-google-maps/api';
+import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
 import '../css/AddPlace.css';
 
 const libraries = ['places'];
@@ -34,7 +34,11 @@ function AddPlace({ onClose }) {
   const [success, setSuccess] = useState(false);
   const [mapCenter, setMapCenter] = useState({ lat: -23.5505, lng: -46.6333 });
   const [selectedLocation, setSelectedLocation] = useState(null);
-  const [autocomplete, setAutocomplete] = useState(null);
+  
+  // Estados para busca de endereço
+  const [addressInput, setAddressInput] = useState('');
+  const [addressSuggestions, setAddressSuggestions] = useState([]);
+  const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
 
   const categories = [
     'Restaurante',
@@ -76,6 +80,83 @@ function AddPlace({ onClose }) {
       );
     }
   }, []);
+
+  // Função para buscar endereços (igual à página principal)
+  const searchAddresses = (searchText) => {
+    if (!window.google || !window.google.maps) {
+      console.error('Google Maps API não carregada');
+      return;
+    }
+
+    const service = new window.google.maps.places.AutocompleteService();
+    service.getPlacePredictions(
+      {
+        input: searchText,
+        componentRestrictions: { country: 'br' },
+        types: ['establishment', 'geocode']
+      },
+      (predictions, status) => {
+        if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+          setAddressSuggestions(predictions.slice(0, 5));
+          setShowAddressSuggestions(true);
+        } else {
+          setAddressSuggestions([]);
+          setShowAddressSuggestions(false);
+        }
+      }
+    );
+  };
+
+  // Função para mudanças no input de endereço
+  const handleAddressInputChange = (e) => {
+    const value = e.target.value;
+    setAddressInput(value);
+    
+    // Buscar sugestões se o input tiver 2+ caracteres
+    if (value.length >= 2) {
+      searchAddresses(value);
+    } else {
+      setAddressSuggestions([]);
+      setShowAddressSuggestions(false);
+    }
+  };
+
+  // Função para cliques nas sugestões de endereço
+  const handleAddressSuggestionClick = (suggestion) => {
+    setAddressInput(suggestion.description);
+    setAddressSuggestions([]);
+    setShowAddressSuggestions(false);
+    
+    // Usar Places Details API para obter coordenadas
+    if (window.google && window.google.maps) {
+      const service = new window.google.maps.places.PlacesService(document.createElement('div'));
+      service.getDetails(
+        {
+          placeId: suggestion.place_id,
+          fields: ['geometry', 'name', 'formatted_address', 'formatted_phone_number', 'website']
+        },
+        (place, status) => {
+          if (status === window.google.maps.places.PlacesServiceStatus.OK && place.geometry) {
+            const location = {
+              lat: place.geometry.location.lat(),
+              lng: place.geometry.location.lng()
+            };
+            setSelectedLocation(location);
+            setMapCenter(location);
+            setFormData(prev => ({
+              ...prev,
+              name: place.name || prev.name,
+              address: place.formatted_address || suggestion.description,
+              latitude: location.lat,
+              longitude: location.lng,
+              phone: place.formatted_phone_number || prev.phone,
+              website: place.website || prev.website
+            }));
+          }
+        }
+      );
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -150,33 +231,6 @@ function AddPlace({ onClose }) {
           }));
         }
       });
-    }
-  };
-
-  const onAutocompleteLoad = (autocompleteInstance) => {
-    setAutocomplete(autocompleteInstance);
-  };
-
-  const onPlaceChanged = () => {
-    if (autocomplete) {
-      const place = autocomplete.getPlace();
-      if (place.geometry) {
-        const location = {
-          lat: place.geometry.location.lat(),
-          lng: place.geometry.location.lng()
-        };
-        setSelectedLocation(location);
-        setMapCenter(location);
-        setFormData(prev => ({
-          ...prev,
-          name: place.name || prev.name,
-          address: place.formatted_address || prev.address,
-          latitude: location.lat,
-          longitude: location.lng,
-          phone: place.formatted_phone_number || prev.phone,
-          website: place.website || prev.website
-        }));
-      }
     }
   };
 
@@ -379,16 +433,54 @@ function AddPlace({ onClose }) {
             >
               <div className="form-group">
                 <label>Buscar Endereço</label>
-                <Autocomplete
-                  onLoad={onAutocompleteLoad}
-                  onPlaceChanged={onPlaceChanged}
-                >
+                <div style={{ position: 'relative' }}>
                   <input
                     type="text"
                     placeholder="Digite o endereço ou nome do lugar"
                     className="address-search"
+                    value={addressInput}
+                    onChange={handleAddressInputChange}
+                    autoComplete="off"
+                    onFocus={() => addressInput.length >= 2 && setShowAddressSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowAddressSuggestions(false), 200)}
                   />
-                </Autocomplete>
+                  
+                  {showAddressSuggestions && addressSuggestions.length > 0 && (
+                    <div className="suggestions-dropdown" style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      background: 'white',
+                      border: '2px solid #E0E0E0',
+                      borderTop: 'none',
+                      maxHeight: '200px',
+                      overflowY: 'auto',
+                      zIndex: 1000
+                    }}>
+                      {addressSuggestions.map((suggestion) => (
+                        <div
+                          key={suggestion.place_id}
+                          className="suggestion-item"
+                          onClick={() => handleAddressSuggestionClick(suggestion)}
+                          style={{
+                            padding: '12px',
+                            cursor: 'pointer',
+                            borderBottom: '1px solid #F0F0F0',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}
+                          onMouseEnter={(e) => e.target.style.backgroundColor = '#F5F5F5'}
+                          onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+                        >
+                          <span>📍</span>
+                          <span>{suggestion.description}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               
               <div className="map-container">
