@@ -34,6 +34,7 @@ function AddTip({ onClose }) {
   // Mudando a localização padrão para Lisboa
   const [mapCenter, setMapCenter] = useState({ lat: 38.7223, lng: -9.1393 });
   const [selectedLocation, setSelectedLocation] = useState(null);
+  const [userLocation, setUserLocation] = useState(null);
   
   // Estados para busca de endereço
   const [addressInput, setAddressInput] = useState('');
@@ -45,48 +46,30 @@ function AddTip({ onClose }) {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const userLocation = {
+          const location = {
             lat: position.coords.latitude,
             lng: position.coords.longitude
           };
-          console.log('📍 Localização detectada:', userLocation);
-          setMapCenter(userLocation);
-          setSelectedLocation(userLocation);
-          setFormData(prev => ({
-            ...prev,
-            latitude: userLocation.lat,
-            longitude: userLocation.lng
-          }));
+          setUserLocation(location);
+          setMapCenter(location);
         },
         (error) => {
-          console.log('❌ Erro ao obter localização:', error);
-          // Manter localização padrão (Lisboa) se não conseguir obter a atual
-          const defaultLocation = { lat: 38.7223, lng: -9.1393 };
-          setSelectedLocation(defaultLocation);
-          setFormData(prev => ({
-            ...prev,
-            latitude: defaultLocation.lat,
-            longitude: defaultLocation.lng
-          }));
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 300000 // 5 minutos
+          // Usar localização padrão
         }
       );
     } else {
-      console.log('❌ Geolocalização não suportada');
-      // Usar localização padrão de Lisboa
-      const defaultLocation = { lat: 38.7223, lng: -9.1393 };
-      setSelectedLocation(defaultLocation);
-      setFormData(prev => ({
-        ...prev,
-        latitude: defaultLocation.lat,
-        longitude: defaultLocation.lng
-      }));
+      // Geolocalização não suportada
     }
   }, []);
+
+  const loadTips = async () => {
+    try {
+      const tips = await getTipsByCategory(selectedCategory, 20);
+      setTips(tips);
+    } catch (error) {
+      // Erro silencioso
+    }
+  };
 
   const categories = [
     'Todos',

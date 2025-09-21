@@ -24,9 +24,7 @@ const Login = () => {
         await createUserWithEmailAndPassword(auth, email, password);
         console.log('✅ Conta criada com sucesso');
       }
-      // Resetar loading imediatamente após sucesso
       setLoading(false);
-      console.log('🔄 Loading resetado após login');
     } catch (error) {
       console.error('❌ Erro na autenticação:', error);
       setError(error.message);
@@ -35,16 +33,12 @@ const Login = () => {
   };
 
   const handleGoogleLogin = async () => {
-    setError('');
     setLoading(true);
-    
+    const googleProvider = new GoogleAuthProvider();
     try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-      console.log('✅ Login com Google realizado com sucesso');
-      // Resetar loading imediatamente após sucesso
+      const result = await signInWithPopup(auth, googleProvider);
+      console.log('✅ Login com Google realizado:', result.user);
       setLoading(false);
-      console.log('🔄 Loading resetado após login Google');
     } catch (error) {
       console.error('❌ Erro no login com Google:', error);
       setError(error.message);

@@ -34,6 +34,7 @@ function AddPlace({ onClose }) {
   const [success, setSuccess] = useState(false);
   const [mapCenter, setMapCenter] = useState({ lat: -23.5505, lng: -46.6333 });
   const [selectedLocation, setSelectedLocation] = useState(null);
+  const [userLocation, setUserLocation] = useState(null);
   
   // Estados para busca de endereço
   const [addressInput, setAddressInput] = useState('');
@@ -68,14 +69,15 @@ function AddPlace({ onClose }) {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const userLocation = {
+          const location = {
             lat: position.coords.latitude,
             lng: position.coords.longitude
           };
-          setMapCenter(userLocation);
+          setUserLocation(location);
+          setMapCenter(location);
         },
         (error) => {
-          console.log('Erro ao obter localização:', error);
+          // Usar localização padrão
         }
       );
     }
@@ -84,7 +86,6 @@ function AddPlace({ onClose }) {
   // Função para buscar endereços (agora global)
   const searchAddresses = (searchText) => {
     if (!window.google || !window.google.maps) {
-      console.error('Google Maps API não carregada');
       return;
     }
 
@@ -109,7 +110,7 @@ function AddPlace({ onClose }) {
   };
 
   // Função para mudanças no input de endereço
-  const handleAddressInputChange = (e) => {
+    const handleAddressInputChange = (e) => {
     const value = e.target.value;
     setAddressInput(value);
     
@@ -221,18 +222,16 @@ function AddPlace({ onClose }) {
       longitude: location.lng
     }));
 
-    // Geocoding reverso para obter endereço
-    if (window.google && window.google.maps) {
-      const geocoder = new window.google.maps.Geocoder();
-      geocoder.geocode({ location }, (results, status) => {
-        if (status === 'OK' && results[0]) {
-          setFormData(prev => ({
-            ...prev,
-            address: results[0].formatted_address
-          }));
-        }
-      });
-    }
+    // Buscar endereço usando geocoding reverso
+    const geocoder = new window.google.maps.Geocoder();
+    geocoder.geocode({ location }, (results, status) => {
+      if (status === 'OK' && results[0]) {
+        setFormData(prev => ({
+          ...prev,
+          address: results[0].formatted_address
+        }));
+      }
+    });
   };
 
   const validateForm = () => {

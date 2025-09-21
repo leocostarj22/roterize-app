@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './firebase';
-import { getUserRoutes, saveRoute, deleteRoute } from './firebase';
+import { getUserRoutes, saveRoute, deleteRoute, updateRoute } from './firebase';
 import Login from './Login';
 import UserProfile from './UserProfile';
 import AddPlace from './AddPlace';
@@ -27,30 +27,28 @@ function App() {
   const [showSavedRoutes, setShowSavedRoutes] = useState(false);
   const [routeName, setRouteName] = useState('');
   const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [saveMode, setSaveMode] = useState('new'); // 'new', 'update', 'choose'
+  const [currentRouteId, setCurrentRouteId] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
   const [showAddPlace, setShowAddPlace] = useState(false);
   const [showAddTip, setShowAddTip] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  
+    // Estados para opções expandidas de roteiros
+  const [selectedRoute, setSelectedRoute] = useState(null);
+  const [showRouteOptions, setShowRouteOptions] = useState(false);
   // Estados para o mapa com localização atual
   const [mapCenter, setMapCenter] = useState({ lat: 38.7223, lng: -9.1393 }); // Lisboa como padrão
   const [userLocation, setUserLocation] = useState(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      console.log('🔐 AUTH: Estado de autenticação mudou:', currentUser);
       if (currentUser) {
-        console.log('🔐 AUTH: Usuário logado:', {
-          uid: currentUser.uid,
-          email: currentUser.email,
-          displayName: currentUser.displayName
-        });
         await loadUserRoutes(currentUser.uid);
+        setUser(currentUser);
       } else {
-        console.log('🔐 AUTH: Usuário não está logado');
+        setUser(null);
         setSavedRoutes([]);
       }
-      setUser(currentUser);
       setAuthLoading(false);
     });
 
@@ -66,12 +64,10 @@ function App() {
             lat: position.coords.latitude,
             lng: position.coords.longitude
           };
-          console.log('📍 Localização detectada na tela inicial:', location);
           setMapCenter(location);
           setUserLocation(location);
         },
         (error) => {
-          console.log('❌ Erro ao obter localização na tela inicial:', error);
           // Manter localização padrão (Lisboa)
         },
         {
@@ -85,47 +81,34 @@ function App() {
 
   const loadUserRoutes = async (userId) => {
     try {
-      setLoadingRoutes(true); // Iniciar loading
-      console.log('🔍 LOAD: Carregando roteiros para:', userId);
+      setLoadingRoutes(true);
       const routes = await getUserRoutes(userId);
-      console.log('🔍 LOAD: Roteiros carregados:', routes.length);
       setSavedRoutes(routes);
     } catch (error) {
-      console.error('❌ LOAD: Erro:', error);
+      // Erro silencioso
     } finally {
-      setLoadingRoutes(false); // Finalizar loading
+      setLoadingRoutes(false);
     }
   };
 
   const handleSaveRoute = async () => {
-    console.log('🔍 TESTE: Iniciando salvamento do roteiro');
-    console.log('🔍 TESTE: Usuário logado:', user ? user.uid : 'Não logado');
-    console.log('🔍 TESTE: Nome do roteiro:', routeName.trim());
-    console.log('🔍 TESTE: Lugares:', places);
-    console.log('🔍 TESTE: Direções:', directions ? 'Existem' : 'Não existem');
-    console.log('🔍 TESTE: Steps:', steps);
-    
     if (!routeName.trim()) {
-      alert('Por favor, insira um nome para o roteiro.');
+      alert('Por favor, digite um nome para o roteiro.');
       return;
     }
-  
+
     if (!directions || places.length < 2) {
       alert('Gere um roteiro antes de salvá-lo.');
       return;
     }
-  
+
     try {
-      console.log('🔍 TESTE: Preparando dados do roteiro...');
-      
       // Calcular distância e duração de forma mais segura
       let totalDistance = 0;
       let totalDuration = 0;
       
       if (steps && steps.length > 0) {
-        steps.forEach((step, index) => {
-          console.log(`🔍 TESTE: Step ${index}:`, step);
-          
+        steps.forEach((step) => {
           // Extrair distância de forma mais robusta
           if (step.distance) {
             const distanceMatch = step.distance.match(/([\d,.]+)/);
@@ -155,38 +138,48 @@ function App() {
         places: places,
         travelMode: mode,
         steps: steps,
+        directions: directions,
+        mapCenter: mapCenter,
         totalDistance: totalDistance,
         totalDuration: totalDuration,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        createdAt: new Date()
       };
       
-      console.log('🔍 TESTE: Dados finais do roteiro:', routeData);
-      console.log('🔍 TESTE: Chamando saveRoute...');
+      let routeId;
       
-      const routeId = await saveRoute(user.uid, routeData);
-      console.log('🔍 TESTE: Roteiro salvo com sucesso! ID:', routeId);
+      if (currentRouteId && saveMode === 'update') {
+        await updateRoute(currentRouteId, routeData);
+        routeId = currentRouteId;
+        alert('✅ Roteiro atualizado com sucesso!');
+      } else {
+        routeId = await saveRoute(user.uid, routeData);
+        
+        if (saveMode === 'new') {
+          setCurrentRouteId(null);
+        }
+        
+        alert('✅ Novo roteiro salvo com sucesso!');
+      }
       
       await loadUserRoutes(user.uid);
-      console.log('🔍 TESTE: Roteiros recarregados');
-      
       setShowSaveDialog(false);
-      setRouteName('');
-      alert('✅ Roteiro salvo com sucesso!');
+      setSaveMode('new');
+      
+      if (saveMode === 'new') {
+        setCurrentRouteId(routeId);
+      }
       
     } catch (error) {
-      console.error('❌ TESTE: Erro detalhado ao salvar roteiro:', error);
-      console.error('❌ TESTE: Stack trace:', error.stack);
-      console.error('❌ TESTE: Código do erro:', error.code);
-      console.error('❌ TESTE: Mensagem do erro:', error.message);
-      
-      // Mostrar erro mais detalhado para o usuário
-      alert(`❌ Erro ao salvar roteiro:\n\nCódigo: ${error.code || 'Desconhecido'}\nMensagem: ${error.message || 'Erro desconhecido'}\n\nVerifique o console para mais detalhes.`);
+      alert(`❌ Erro ao salvar roteiro: ${error.message || 'Erro desconhecido'}`);
     }
   };
 
   const handleLoadRoute = (route) => {
     setPlaces(route.places);
     setMode(route.travelMode);
+    setCurrentRouteId(route.id); // Rastrear qual roteiro está carregado
+    setRouteName(route.name); // Pré-preencher o nome
     setShowSavedRoutes(false);
     // Regenerar o roteiro com os dados salvos
     setTimeout(() => {
@@ -200,27 +193,74 @@ function App() {
       await loadUserRoutes(user.uid);
       alert('Roteiro deletado com sucesso!');
     } catch (error) {
-      console.error('Erro ao deletar roteiro:', error);
       alert('Erro ao deletar roteiro: ' + error.message);
     }
   };
 
+  // Função para gerar texto do roteiro para exportação
+  const generateRouteText = (route) => {
+    let text = `🗺️ ${route.name}\n\n`;
+    text += `📍 Locais (${route.places?.length || 0}):\n`;
+    
+    if (route.places) {
+      route.places.forEach((place, index) => {
+        text += `${index + 1}. ${place}\n`;
+      });
+    }
+    
+    text += `\n🚗 Modo de transporte: ${route.travelMode}\n`;
+    
+    if (route.totalDistance) {
+      text += `📏 Distância total: ${route.totalDistance}\n`;
+    }
+    
+    if (route.totalDuration) {
+      text += `⏱️ Tempo estimado: ${route.totalDuration} min\n`;
+    }
+    
+    if (route.steps && route.steps.length > 0) {
+      text += `\n📋 Roteiro Detalhado:\n`;
+      route.steps.forEach((step, index) => {
+        // Usar diferentes fontes para os nomes dos locais
+        const startName = step.startName || 
+                         (route.places && route.places[index]) || 
+                         (step.start && step.start.split(',')[0]) || 
+                         'Local não identificado';
+        
+        const endName = step.endName || 
+                       (route.places && route.places[index + 1]) || 
+                       (step.end && step.end.split(',')[0]) || 
+                       'Local não identificado';
+        
+        text += `\n${index + 1}. ${startName} → ${endName}\n`;
+        text += `   📏 ${step.distance || 'N/A'} • ⏱️ ${step.duration || 'N/A'}\n`;
+        
+        // Adicionar endereços completos se disponíveis
+        if (step.start && step.end) {
+          text += `   📍 De: ${step.start}\n`;
+          text += `   🎯 Para: ${step.end}\n`;
+        }
+      });
+    }
+    
+    text += `\n📅 Criado em: ${route.createdAt ? new Date(route.createdAt.seconds * 1000).toLocaleDateString() : 'Data não disponível'}`;
+    text += `\n\n🌟 Gerado pelo Roterize`;
+    
+    return text;
+  };
+
   // Função para fazer logout
   const handleLogout = async () => {
-    console.log('🚪 LOGOUT: Iniciando processo de logout...');
     try {
-      console.log('🚪 LOGOUT: Chamando signOut...');
       await signOut(auth);
-      console.log('🚪 LOGOUT: signOut executado com sucesso');
       setUser(null);
-      setSavedRoutes([]);
       setPlaces([]);
       setDirections(null);
       setSteps([]);
+      setSavedRoutes([]);
       setShowMenu(false);
-      console.log('🚪 LOGOUT: Estados limpos com sucesso');
+      setShowSavedRoutes(false);
     } catch (error) {
-      console.error('🚪 LOGOUT: Erro ao fazer logout:', error);
       alert('Erro ao fazer logout: ' + error.message);
     }
   };
@@ -297,30 +337,38 @@ function App() {
 
   // Função para gerar roteiro
   const handleGenerateRoute = () => {
-    if (places.length < 2) {
-      alert('Adicione pelo menos 2 locais para gerar um roteiro.');
+    const validPlaces = places.filter(place => place.trim() !== '');
+    
+    if (validPlaces.length < 2) {
+      alert('Por favor, adicione pelo menos 2 locais para gerar o roteiro.');
       return;
     }
 
     if (!window.google || !window.google.maps) {
-      alert('Google Maps API não está carregada.');
+      alert('Google Maps não está carregado. Tente novamente.');
       return;
     }
 
     const directionsService = new window.google.maps.DirectionsService();
     
     // Configurar waypoints (locais intermediários)
-    const waypoints = places.slice(1, -1).map(place => ({
+    const origin = validPlaces[0];
+    const destination = validPlaces[validPlaces.length - 1];
+    const waypoints = validPlaces.slice(1, -1).map(place => ({
       location: place,
       stopover: true
     }));
 
     const request = {
-      origin: places[0],
-      destination: places[places.length - 1],
+      origin: origin,
+      destination: destination,
       waypoints: waypoints,
       travelMode: window.google.maps.TravelMode[mode],
-      optimizeWaypoints: true
+      optimizeWaypoints: true,
+      avoidHighways: false,
+      avoidTolls: false,
+      unitSystem: window.google.maps.UnitSystem.METRIC,
+      provideRouteAlternatives: false
     };
 
     directionsService.route(request, (result, status) => {
@@ -344,23 +392,56 @@ function App() {
           lng: center.lng()
         });
         
-        // Extrair passos detalhados
+        // Extrair passos detalhados com informações de otimização
         const legs = route.legs;
         const routeSteps = [];
+        let totalDistance = 0;
+        let totalDuration = 0;
         
         legs.forEach((leg, index) => {
+          // Somar distâncias e tempos totais
+          totalDistance += leg.distance.value;
+          totalDuration += leg.duration.value;
+          
+          // Extrair nome do local do endereço (primeira parte antes da vírgula)
+          const startName = validPlaces[index] || leg.start_address.split(',')[0];
+          const endName = validPlaces[index + 1] || leg.end_address.split(',')[0];
+          
           routeSteps.push({
+            stepNumber: index + 1,
+            startName: startName,
+            endName: endName,
             start: leg.start_address,
             end: leg.end_address,
             distance: leg.distance.text,
-            duration: leg.duration.text
+            duration: leg.duration.text,
+            distanceValue: leg.distance.value,
+            durationValue: leg.duration.value
           });
         });
         
         setSteps(routeSteps);
       } else {
-        console.error('Erro ao gerar roteiro:', status);
-        alert('Erro ao gerar roteiro. Verifique os locais inseridos.');
+        let errorMessage = 'Erro ao gerar roteiro. ';
+        
+        switch(status) {
+          case 'NOT_FOUND':
+            errorMessage += 'Um ou mais locais não foram encontrados.';
+            break;
+          case 'ZERO_RESULTS':
+            errorMessage += 'Não foi possível encontrar uma rota entre os locais.';
+            break;
+          case 'OVER_QUERY_LIMIT':
+            errorMessage += 'Limite de consultas excedido. Tente novamente mais tarde.';
+            break;
+          case 'REQUEST_DENIED':
+            errorMessage += 'Solicitação negada.';
+            break;
+          default:
+            errorMessage += 'Erro desconhecido.';
+        }
+        
+        alert(errorMessage);
       }
     });
   };
@@ -610,17 +691,36 @@ function App() {
                   <GoogleMap
                     mapContainerStyle={{ 
                       width: '100%', 
-                      height: '500px',
-                      minHeight: '450px'
+                      height: '100%'
                     }}
                     center={mapCenter}
-                    zoom={directions ? 12 : 13}
+                    zoom={directions ? 11 : 13}
                     options={{
                       zoomControl: true,
                       streetViewControl: false,
                       mapTypeControl: false,
                       fullscreenControl: true,
-                      gestureHandling: 'greedy'
+                      gestureHandling: 'greedy',
+                      disableDefaultUI: false,
+                      clickableIcons: false,
+                      styles: [
+                        {
+                          featureType: "poi",
+                          elementType: "labels",
+                          stylers: [{ visibility: "off" }]
+                        }
+                      ]
+                    }}
+                    onLoad={(map) => {
+                      // Ajustar o mapa aos bounds quando há rota
+                      if (directions && directions.routes && directions.routes[0]) {
+                        const bounds = new window.google.maps.LatLngBounds();
+                        directions.routes[0].legs.forEach(leg => {
+                          bounds.extend(leg.start_location);
+                          bounds.extend(leg.end_location);
+                        });
+                        map.fitBounds(bounds, { padding: 50 });
+                      }
                     }}
                   >
                     {userLocation && (
@@ -670,9 +770,23 @@ function App() {
                       <div key={index} className="step-item">
                         <div className="step-number">{index + 1}</div>
                         <div className="step-details">
-                          <p><strong>De:</strong> {step.start}</p>
-                          <p><strong>Para:</strong> {step.end}</p>
-                          <p><strong>Distância:</strong> {step.distance} • <strong>Tempo:</strong> {step.duration}</p>
+                          <div className="location-info">
+                            <div className="location-block">
+                              <span className="location-label">📍 Origem:</span>
+                              <div className="location-name">{step.startName}</div>
+                              <div className="location-address">{step.start}</div>
+                            </div>
+                            <div className="route-arrow">→</div>
+                            <div className="location-block">
+                              <span className="location-label">🎯 Destino:</span>
+                              <div className="location-name">{step.endName}</div>
+                              <div className="location-address">{step.end}</div>
+                            </div>
+                          </div>
+                          <div className="route-stats">
+                            <span className="stat-item">📏 {step.distance}</span>
+                            <span className="stat-item">⏱️ {step.duration}</span>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -706,9 +820,23 @@ function App() {
                           <div className="route-info">
                             <h4>{route.name}</h4>
                             <p>{route.places?.length || 0} locais • {route.travelMode}</p>
+                            <div className="route-stats">
+                              {route.totalDistance && <span>📏 {route.totalDistance}</span>}
+                              {route.totalDuration && <span>⏱️ {route.totalDuration} min</span>}
+                            </div>
                             <small>Criado em: {route.createdAt ? new Date(route.createdAt.seconds * 1000).toLocaleDateString() : 'Data não disponível'}</small>
                           </div>
                           <div className="route-actions">
+                            <button 
+                              onClick={() => {
+                                setSelectedRoute(route);
+                                setShowRouteOptions(true);
+                              }} 
+                              className="options-btn"
+                              title="Opções do Roteiro"
+                            >
+                              ⚙️
+                            </button>
                             <button 
                               onClick={() => handleLoadRoute(route)} 
                               className="load-btn"
@@ -734,20 +862,83 @@ function App() {
               {showSaveDialog && (
                 <div className="save-dialog-overlay">
                   <div className="save-dialog">
-                    <h3>Salvar Roteiro</h3>
-                    <input
-                      type="text"
-                      placeholder="Nome do roteiro"
-                      value={routeName}
-                      onChange={(e) => setRouteName(e.target.value)}
-                      className="route-name-input"
-                    />
+                    <h3>💾 Salvar Roteiro</h3>
+                    
+                    {currentRouteId ? (
+                      <div className="save-options">
+                        <p className="current-route-info">
+                          📋 Roteiro atual: <strong>{routeName}</strong>
+                        </p>
+                        
+                        <div className="save-mode-selection">
+                          <label className="save-option">
+                            <input
+                              type="radio"
+                              name="saveMode"
+                              value="update"
+                              checked={saveMode === 'update'}
+                              onChange={(e) => setSaveMode(e.target.value)}
+                            />
+                            <div className="option-content">
+                              <strong>🔄 Atualizar roteiro existente</strong>
+                              <small>Substituir o roteiro "{routeName}" pelas alterações</small>
+                            </div>
+                          </label>
+                          
+                          <label className="save-option">
+                            <input
+                              type="radio"
+                              name="saveMode"
+                              value="new"
+                              checked={saveMode === 'new'}
+                              onChange={(e) => setSaveMode(e.target.value)}
+                            />
+                            <div className="option-content">
+                              <strong>✨ Salvar como novo roteiro</strong>
+                              <small>Criar um novo roteiro mantendo o original</small>
+                            </div>
+                          </label>
+                        </div>
+                        
+                        {saveMode === 'new' && (
+                          <input
+                            type="text"
+                            placeholder="Nome do novo roteiro"
+                            value={routeName}
+                            onChange={(e) => setRouteName(e.target.value)}
+                            className="route-name-input"
+                          />
+                        )}
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="new-route-info">✨ Criando novo roteiro</p>
+                        <input
+                          type="text"
+                          placeholder="Nome do roteiro"
+                          value={routeName}
+                          onChange={(e) => setRouteName(e.target.value)}
+                          className="route-name-input"
+                        />
+                      </div>
+                    )}
+                    
                     <div className="dialog-actions">
-                      <button onClick={() => setShowSaveDialog(false)} className="cancel-btn">
+                      <button 
+                        onClick={() => {
+                          setShowSaveDialog(false);
+                          setSaveMode('new');
+                        }} 
+                        className="cancel-btn"
+                      >
                         Cancelar
                       </button>
-                      <button onClick={handleSaveRoute} className="save-btn">
-                        Salvar
+                      <button 
+                        onClick={handleSaveRoute} 
+                        className="save-btn"
+                        disabled={!routeName.trim()}
+                      >
+                        {currentRouteId && saveMode === 'update' ? '🔄 Atualizar' : '💾 Salvar Novo'}
                       </button>
                     </div>
                   </div>
@@ -766,6 +957,97 @@ function App() {
                   onClose={() => setShowAddPlace(false)} 
                 />
               )}
+
+              {/* Modal de Opções do Roteiro */}
+              {showRouteOptions && selectedRoute && (
+                <div className="modal-overlay">
+                  <div className="route-options-modal">
+                    <div className="modal-header">
+                      <h3>📋 {selectedRoute.name}</h3>
+                      <button 
+                        onClick={() => {
+                          setShowRouteOptions(false);
+                          setSelectedRoute(null);
+                        }}
+                        className="close-btn"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    
+                    <div className="modal-content">
+                      <div className="route-summary">
+                        <p><strong>Locais:</strong> {selectedRoute.places?.length || 0}</p>
+                        <p><strong>Modo:</strong> {selectedRoute.travelMode}</p>
+                        {selectedRoute.totalDistance && <p><strong>Distância:</strong> {selectedRoute.totalDistance}</p>}
+                        {selectedRoute.totalDuration && <p><strong>Tempo:</strong> {selectedRoute.totalDuration} min</p>}
+                      </div>
+                      
+                      <div className="route-options-grid">
+                        <button 
+                          onClick={() => {
+                            handleLoadRoute(selectedRoute);
+                            setShowRouteOptions(false);
+                            setSelectedRoute(null);
+                          }}
+                          className="option-btn load-option"
+                        >
+                          🗺️ Carregar no Mapa
+                        </button>
+                        
+                        <button 
+                          onClick={() => {
+                            handleLoadRoute(selectedRoute);
+                            setShowRouteOptions(false);
+                            setSelectedRoute(null);
+                            // Scroll para o roteiro detalhado
+                            setTimeout(() => {
+                              const stepsContainer = document.querySelector('.steps-container');
+                              if (stepsContainer) {
+                                stepsContainer.scrollIntoView({ behavior: 'smooth' });
+                              }
+                            }, 500);
+                          }}
+                          className="option-btn details-option"
+                        >
+                          📋 Ver Roteiro Detalhado
+                        </button>
+                        
+                        <button 
+                          onClick={() => {
+                            // Exportar roteiro como texto
+                            const routeText = generateRouteText(selectedRoute);
+                            navigator.clipboard.writeText(routeText).then(() => {
+                              alert('📋 Roteiro copiado para a área de transferência!');
+                            });
+                          }}
+                          className="option-btn export-option"
+                        >
+                          📤 Exportar Roteiro
+                        </button>
+                        
+                        <button 
+                          onClick={() => {
+                            if (navigator.share) {
+                              navigator.share({
+                                title: selectedRoute.name,
+                                text: generateRouteText(selectedRoute),
+                              });
+                            } else {
+                              const routeText = generateRouteText(selectedRoute);
+                              navigator.clipboard.writeText(routeText);
+                              alert('📋 Roteiro copiado! Cole onde desejar compartilhar.');
+                            }
+                          }}
+                          className="option-btn share-option"
+                        >
+                          🔗 Compartilhar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </LoadScript>
@@ -775,3 +1057,6 @@ function App() {
 }
 
 export default App;
+
+
+
