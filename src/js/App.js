@@ -5,8 +5,9 @@ import { getUserRoutes, saveRoute, deleteRoute } from './firebase';
 import Login from './Login';
 import UserProfile from './UserProfile';
 import AddPlace from './AddPlace';
+import AddTip from './AddTip';
 import '../css/App.css';
-import { LoadScript, GoogleMap, DirectionsRenderer } from '@react-google-maps/api';
+import { LoadScript, GoogleMap, DirectionsRenderer, Marker } from '@react-google-maps/api';
 import roterizelogo from '../img/roterize.png';
 
 const libraries = ['places'];
@@ -20,7 +21,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [savedRoutes, setSavedRoutes] = useState([]);
-  const [loadingRoutes, setLoadingRoutes] = useState(false); // Novo estado
+  const [loadingRoutes, setLoadingRoutes] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showSavedRoutes, setShowSavedRoutes] = useState(false);
@@ -28,7 +29,12 @@ function App() {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showAddPlace, setShowAddPlace] = useState(false);
+  const [showAddTip, setShowAddTip] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  
+  // Estados para o mapa com localização atual
+  const [mapCenter, setMapCenter] = useState({ lat: 38.7223, lng: -9.1393 }); // Lisboa como padrão
+  const [userLocation, setUserLocation] = useState(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -45,10 +51,36 @@ function App() {
         setSavedRoutes([]);
       }
       setUser(currentUser);
-      setAuthLoading(false); // Resetar loading após verificar autenticação
+      setAuthLoading(false);
     });
 
     return () => unsubscribe();
+  }, []);
+
+  // useEffect para obter localização atual do usuário
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const location = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          console.log('📍 Localização detectada na tela inicial:', location);
+          setMapCenter(location);
+          setUserLocation(location);
+        },
+        (error) => {
+          console.log('❌ Erro ao obter localização na tela inicial:', error);
+          // Manter localização padrão (Lisboa)
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000
+        }
+      );
+    }
   }, []);
 
   const loadUserRoutes = async (userId) => {
@@ -295,8 +327,24 @@ function App() {
       if (status === 'OK') {
         setDirections(result);
         
-        // Extrair passos detalhados
+        // Ajustar o mapa para mostrar toda a rota
+        const bounds = new window.google.maps.LatLngBounds();
         const route = result.routes[0];
+        
+        // Adicionar todos os pontos da rota aos bounds
+        route.legs.forEach(leg => {
+          bounds.extend(leg.start_location);
+          bounds.extend(leg.end_location);
+        });
+        
+        // Calcular centro e zoom apropriados
+        const center = bounds.getCenter();
+        setMapCenter({
+          lat: center.lat(),
+          lng: center.lng()
+        });
+        
+        // Extrair passos detalhados
         const legs = route.legs;
         const routeSteps = [];
         
@@ -369,7 +417,11 @@ function App() {
     <>
       {authLoading ? (
         <div className="loading-screen">
-          <div className="loading-spinner">Carregando...</div>
+          <div className="loading-content">
+            <img src={roterizelogo} alt="Roterize" className="loading-logo" />
+            <div className="loading-spinner"></div>
+            <p>Carregando...</p>
+          </div>
         </div>
       ) : !user ? (
         <Login />
@@ -378,326 +430,344 @@ function App() {
           googleMapsApiKey="AIzaSyAXh77iqGaYjKccJPfQEFbYEBN6EpKSFCM"
           libraries={libraries}
         >
-          <div className="app-container">
-            <div className="header">
-              <div className="header-left">
-                <img src={roterizelogo} alt="Roterize" className="logomarca" />
-              </div>
-              <div className="header-right">
-                <button 
-                  onClick={() => setShowProfile(true)} 
-                  className="profile-btn"
-                  title="Meu Perfil"
-                >
-                  {user?.photoURL ? (
-                    <img 
-                      src={user.photoURL} 
-                      alt="Foto do perfil" 
-                      className="profile-photo-small"
-                    />
-                  ) : (
-                    <div className="profile-avatar-small">👤</div>
-                  )}
-                  <span className="profile-name">{user ? (user.displayName || user.email).split(' ')[0] : 'Usuário'}</span>
-                </button>
-                
-                <div className="menu-container">
+          {showAddTip ? (
+            <AddTip onClose={() => setShowAddTip(false)} />
+          ) : (
+            <div className="app-container">
+              <div className="header">
+                <div className="header-left">
+                  <img src={roterizelogo} alt="Roterize" className="logomarca" />
+                </div>
+                <div className="header-right">
                   <button 
-                    className="menu-btn"
-                    onClick={() => setShowMenu(!showMenu)}
-                    title="Menu"
+                    onClick={() => setShowProfile(true)} 
+                    className="profile-btn"
+                    title="Meu Perfil"
                   >
-                    ⋮
+                    {user?.photoURL ? (
+                      <img 
+                        src={user.photoURL} 
+                        alt="Foto do perfil" 
+                        className="profile-photo-small"
+                      />
+                    ) : (
+                      <div className="profile-initial">
+                        {user?.displayName?.charAt(0) || user?.email?.charAt(0) || '?'}
+                      </div>
+                    )}
                   </button>
                   
-                  {showMenu && (
-                    <div className="dropdown-menu">
-                      <button 
-                        className="menu-item"
-                        onClick={async () => {
-                          console.log('🔍 BOTÃO: Forçando recarregamento de roteiros');
-                          if (user) {
-                            console.log('🔍 BOTÃO: user.uid:', user.uid);
-                            await loadUserRoutes(user.uid); // SEMPRE recarregar
-                          }
-                          setShowSavedRoutes(!showSavedRoutes);
-                          setShowMenu(false);
-                        }}
-                      >
-                        📁 Roteiros Salvos
-                      </button>
-                      <button 
-                        className="menu-item"
-                        onClick={() => {
-                          setShowAddPlace(true);
-                          setShowMenu(false);
-                        }}
-                      >
-                        📍 Dica de Lugar
-                      </button>
-                      <button className="menu-item">
-                        🔔 Notificações
-                      </button>
-                      <button className="menu-item">
-                        ⚙️ Configurações
-                      </button>
-                      {/* Botão de teste temporariamente suspenso
-                      {process.env.NODE_ENV === 'development' && (
+                  <div className="menu-container">
+                    <button 
+                      onClick={() => setShowMenu(!showMenu)} 
+                      className="menu-btn"
+                      title="Menu"
+                    >
+                      ☰
+                    </button>
+                    
+                    {showMenu && (
+                      <div className="dropdown-menu">
                         <button 
                           className="menu-item"
-                          onClick={testDatabaseConnection}
-                          style={{ color: '#ff6b6b' }}
+                          onClick={async () => {
+                            console.log('🔍 BOTÃO: Forçando recarregamento de roteiros');
+                            if (user) {
+                              console.log('🔍 BOTÃO: user.uid:', user.uid);
+                              await loadUserRoutes(user.uid);
+                            }
+                            setShowSavedRoutes(!showSavedRoutes);
+                            setShowMenu(false);
+                          }}
                         >
-                          🧪 Testar BD
+                          📁 Roteiros Salvos
                         </button>
+                        <button 
+                          className="menu-item"
+                          onClick={() => {
+                            setShowAddTip(true);
+                            setShowMenu(false);
+                          }}
+                        >
+                          💡 Compartilhar Dica
+                        </button>
+                        <button 
+                          className="menu-item"
+                          onClick={() => {
+                            alert('Funcionalidade de notificações em desenvolvimento');
+                            setShowMenu(false);
+                          }}
+                        >
+                          🔔 Notificações
+                        </button>
+                        <button 
+                          className="menu-item"
+                          onClick={() => {
+                            alert('Funcionalidade de configurações em desenvolvimento');
+                            setShowMenu(false);
+                          }}
+                        >
+                          ⚙️ Configurações
+                        </button>
+                        <div className="menu-divider"></div>
+                        <button 
+                          className="menu-item logout-item"
+                          onClick={handleLogout}
+                        >
+                          🚪 Sair
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* SEÇÃO PRINCIPAL DE CRIAÇÃO DE ROTEIROS - RESTAURADA */}
+              <div className="main-content">
+                <div className="route-builder">
+                  <h3 style={{ marginBottom: '10px' }}>🗺️ Criar Rotas Rápidas</h3>
+                  
+                  <div className="input-section">
+                    <div className="input-container" style={{ position: 'relative' }}>
+                      <input
+                        type="text"
+                        placeholder="Insira um local"
+                        value={input}
+                        onChange={handleInputChange}
+                        className="input-local"
+                        autoComplete="off"
+                        onFocus={() => input.length >= 3 && setShowSuggestions(true)}
+                        onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                      />
+                      <div className="location-icon">📍</div>
+                      
+                      {showSuggestions && suggestions.length > 0 && (
+                        <div className="suggestions-dropdown">
+                          {suggestions.map((suggestion, index) => (
+                            <div
+                              key={suggestion.place_id}
+                              className="suggestion-item"
+                              onClick={() => handleSuggestionClick(suggestion)}
+                            >
+                              <span className="suggestion-icon">📍</span>
+                              <span className="suggestion-text">{suggestion.description}</span>
+                            </div>
+                          ))}
+                        </div>
                       )}
-                      */}
-                      <div className="menu-divider"></div>
-                      <button 
-                        className="menu-item logout-item"
-                        onClick={handleLogout}
-                      >
-                        🚪 Sair
+                    </div>
+                    
+                    <button onClick={handleAddPlace} className="btn-gerar-roteiro">Adicionar Local</button>
+                  </div>
+
+                  {places.length > 0 && (
+                    <div className="locais-box">
+                      <h4>Locais Adicionados:</h4>
+                      {places.map((place, idx) => (
+                        <div key={idx} className="local-item">
+                          <span>{place}</span>
+                          <button onClick={() => handleRemovePlace(idx)} className="remove-btn">×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {places.length >= 2 && (
+                    <div className="route-options">
+                      <h4>Opções de Roteiro:</h4>
+                      <div className="mode-selector">
+                        <label className="mode-option">
+                          <input
+                            type="radio"
+                            value="WALKING"
+                            checked={mode === 'WALKING'}
+                            onChange={(e) => setMode(e.target.value)}
+                          />
+                          <span className="mode-icon">🚶</span>
+                          <span className="mode-text">A pé</span>
+                        </label>
+                        <label className="mode-option">
+                          <input
+                            type="radio"
+                            value="DRIVING"
+                            checked={mode === 'DRIVING'}
+                            onChange={(e) => setMode(e.target.value)}
+                          />
+                          <span className="mode-icon">🚗</span>
+                          <span className="mode-text">Carro</span>
+                        </label>
+                      </div>
+                      
+                      <button onClick={handleGenerateRoute} className="btn-gerar-roteiro">
+                        🗺️ Gerar Roteiro
                       </button>
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
 
-            {showSavedRoutes && (
-              <div className="saved-routes-panel">
-                <div className="saved-routes-header">
-                  <h3>Roteiros Salvos</h3>
-                  <button 
-                    onClick={() => setShowSavedRoutes(false)}
-                    className="close-panel-btn"
-                    title="Fechar"
+                {/* MAPA com localização atual */}
+                <div className="map-container">
+                  <GoogleMap
+                    mapContainerStyle={{ 
+                      width: '100%', 
+                      height: '500px',
+                      minHeight: '450px'
+                    }}
+                    center={mapCenter}
+                    zoom={directions ? 12 : 13}
+                    options={{
+                      zoomControl: true,
+                      streetViewControl: false,
+                      mapTypeControl: false,
+                      fullscreenControl: true,
+                      gestureHandling: 'greedy'
+                    }}
                   >
-                    ✕
-                  </button>
+                    {userLocation && (
+                      <Marker 
+                        position={userLocation}
+                        icon={{
+                          url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <circle cx="12" cy="12" r="8" fill="#4285F4" stroke="white" stroke-width="2"/>
+                              <circle cx="12" cy="12" r="3" fill="white"/>
+                            </svg>
+                          `),
+                          scaledSize: new window.google.maps.Size(24, 24)
+                        }}
+                        title="Sua localização atual"
+                      />
+                    )}
+                    {directions && (
+                      <DirectionsRenderer 
+                        directions={directions}
+                        options={{
+                          suppressMarkers: false,
+                          polylineOptions: {
+                            strokeColor: '#4285F4',
+                            strokeWeight: 4,
+                            strokeOpacity: 0.8
+                          }
+                        }}
+                      />
+                    )}
+                  </GoogleMap>
+                  <p className="map-location-info">
+                    📍 {userLocation ? 'Sua localização atual' : 'Localização padrão (Lisboa)'}
+                  </p>
                 </div>
-                {loadingRoutes ? (
-                  <p>🔄 Carregando roteiros...</p>
-                ) : savedRoutes.length === 0 ? (
-                  <div>
-                    <p>Nenhum roteiro salvo ainda.</p>
-                  </div>
-                ) : (
-                  <div>
-                    <p>📊 {savedRoutes.length} roteiro(s) encontrado(s)</p>
-                    {savedRoutes.map((route) => (
-                      <div key={route.id} className="saved-route-item">
-                        <div className="route-info">
-                          <h4>{route.name}</h4>
-                          <p>{route.places?.length || 0} locais • {route.travelMode}</p>
-                          <small>Criado em: {route.createdAt ? new Date(route.createdAt.seconds * 1000).toLocaleDateString() : 'Data não disponível'}</small>
-                        </div>
-                        <div className="route-actions">
-                          <button 
-                            onClick={() => handleLoadRoute(route)} 
-                            className="load-btn"
-                            title="Carregar Roteiro"
-                          >
-                            📂
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteRoute(route.id)} 
-                            className="delete-btn"
-                            title="Excluir Roteiro"
-                          >
-                            🗑️
-                          </button>
+
+                {/* PASSOS DO ROTEIRO */}
+                {steps.length > 0 && (
+                  <div className="steps-container">
+                    <div className="steps-header">
+                      <h3>📋 Roteiro Detalhado:</h3>
+                      <button onClick={() => setShowSaveDialog(true)} className="save-route-btn">
+                        💾 Salvar Roteiro
+                      </button>
+                    </div>
+                    {steps.map((step, index) => (
+                      <div key={index} className="step-item">
+                        <div className="step-number">{index + 1}</div>
+                        <div className="step-details">
+                          <p><strong>De:</strong> {step.start}</p>
+                          <p><strong>Para:</strong> {step.end}</p>
+                          <p><strong>Distância:</strong> {step.distance} • <strong>Tempo:</strong> {step.duration}</p>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
-            )}
 
-            {showSaveDialog && (
-              <div className="save-dialog-overlay">
-                <div className="save-dialog">
-                  <h3>Salvar Roteiro</h3>
-                  <input
-                    type="text"
-                    placeholder="Nome do roteiro"
-                    value={routeName}
-                    onChange={(e) => setRouteName(e.target.value)}
-                    className="route-name-input"
-                  />
-                  <div className="dialog-actions">
-                    <button onClick={() => setShowSaveDialog(false)} className="cancel-btn">
-                      Cancelar
-                    </button>
-                    <button onClick={handleSaveRoute} className="save-btn">
-                      Salvar
+              {showSavedRoutes && (
+                <div className="saved-routes-panel">
+                  <div className="saved-routes-header">
+                    <h3>Roteiros Salvos</h3>
+                    <button 
+                      onClick={() => setShowSavedRoutes(false)}
+                      className="close-panel-btn"
+                      title="Fechar"
+                    >
+                      ✕
                     </button>
                   </div>
-                </div>
-              </div>
-            )}
-
-            {showProfile && (
-              <UserProfile 
-                user={user} 
-                onClose={() => setShowProfile(false)} 
-              />
-            )}
-
-            {showAddPlace && (
-              <AddPlace 
-                onClose={() => setShowAddPlace(false)} 
-              />
-            )}
-
-            {showSaveDialog && (
-              <div className="save-dialog-overlay">
-                <div className="save-dialog">
-                  <h3>Salvar Roteiro</h3>
-                  <input
-                    type="text"
-                    placeholder="Nome do roteiro"
-                    value={routeName}
-                    onChange={(e) => setRouteName(e.target.value)}
-                    className="route-name-input"
-                  />
-                  <div className="dialog-actions">
-                    <button onClick={() => setShowSaveDialog(false)} className="cancel-btn">
-                      Cancelar
-                    </button>
-                    <button onClick={handleSaveRoute} className="save-btn">
-                      Salvar
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="main-content">
-              <div className="location-card">
-                <div className="location-header">
-                  <h3 className="location-title">Adicionar Locais</h3>
-                  <button className="filter-btn">Filtros</button>
-                </div>
-                
-                <div className="input-container" style={{ position: 'relative' }}>
-                  <input
-                    type="text"
-                    placeholder="Insira um local"
-                    value={input}
-                    onChange={handleInputChange}
-                    className="input-local"
-                    autoComplete="off"
-                    onFocus={() => input.length >= 3 && setShowSuggestions(true)}
-                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                  />
-                  <div className="location-icon">📍</div>
-                  
-                  {showSuggestions && suggestions.length > 0 && (
-                    <div className="suggestions-dropdown">
-                      {suggestions.map((suggestion, index) => (
-                        <div
-                          key={suggestion.place_id}
-                          className="suggestion-item"
-                          onClick={() => handleSuggestionClick(suggestion)}
-                        >
-                          <span className="suggestion-icon">📍</span>
-                          <span className="suggestion-text">{suggestion.description}</span>
+                  {loadingRoutes ? (
+                    <p>🔄 Carregando roteiros...</p>
+                  ) : savedRoutes.length === 0 ? (
+                    <div>
+                      <p>Nenhum roteiro salvo ainda.</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <p>📊 {savedRoutes.length} roteiro(s) encontrado(s)</p>
+                      {savedRoutes.map((route) => (
+                        <div key={route.id} className="saved-route-item">
+                          <div className="route-info">
+                            <h4>{route.name}</h4>
+                            <p>{route.places?.length || 0} locais • {route.travelMode}</p>
+                            <small>Criado em: {route.createdAt ? new Date(route.createdAt.seconds * 1000).toLocaleDateString() : 'Data não disponível'}</small>
+                          </div>
+                          <div className="route-actions">
+                            <button 
+                              onClick={() => handleLoadRoute(route)} 
+                              className="load-btn"
+                              title="Carregar Roteiro"
+                            >
+                              📂
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteRoute(route.id)} 
+                              className="delete-btn"
+                              title="Excluir Roteiro"
+                            >
+                              🗑️
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
-                
-                <button onClick={handleAddPlace} className="btn-gerar-roteiro">Adicionar Local</button>
-              </div>
+              )}
 
-              {places.length > 0 && (
-                <div className="locais-box">
-                  <h4>Locais Adicionados:</h4>
-                  {places.map((place, idx) => (
-                    <div key={idx} className="local-item">
-                      <span>{place}</span>
-                      <button onClick={() => handleRemovePlace(idx)} className="remove-btn">×</button>
+              {showSaveDialog && (
+                <div className="save-dialog-overlay">
+                  <div className="save-dialog">
+                    <h3>Salvar Roteiro</h3>
+                    <input
+                      type="text"
+                      placeholder="Nome do roteiro"
+                      value={routeName}
+                      onChange={(e) => setRouteName(e.target.value)}
+                      className="route-name-input"
+                    />
+                    <div className="dialog-actions">
+                      <button onClick={() => setShowSaveDialog(false)} className="cancel-btn">
+                        Cancelar
+                      </button>
+                      <button onClick={handleSaveRoute} className="save-btn">
+                        Salvar
+                      </button>
                     </div>
-                  ))}
-                </div>
-              )}
-
-              {places.length >= 2 && (
-                <div className="route-options">
-                  <h4>Opções de Roteiro:</h4>
-                  <div className="mode-selector">
-                    <label>
-                      <input
-                        type="radio"
-                        value="WALKING"
-                        checked={mode === 'WALKING'}
-                        onChange={e => setMode(e.target.value)}
-                      />
-                      🚶 Caminhada
-                    </label>
-                    <label>
-                      <input
-                        type="radio"
-                        value="DRIVING"
-                        checked={mode === 'DRIVING'}
-                        onChange={e => setMode(e.target.value)}
-                      />
-                      🚗 Carro
-                    </label>
                   </div>
-                  <button onClick={handleGenerateRoute} className="btn-gerar-roteiro">
-                    Gerar Roteiro
-                  </button>
                 </div>
               )}
 
-              {directions && (
-                <div className="map-container">
-                  <GoogleMap
-                    mapContainerStyle={{ width: '100%', height: '400px' }}
-                    center={{ lat: -14.235, lng: -51.9253 }}
-                    zoom={5}
-                  >
-                    <DirectionsRenderer directions={directions} />
-                  </GoogleMap>
-                </div>
+              {showProfile && (
+                <UserProfile 
+                  user={user} 
+                  onClose={() => setShowProfile(false)} 
+                />
               )}
 
-              {steps.length > 0 && (
-                <div className="steps-container">
-                  <div className="steps-header">
-                    <h4>Roteiro Detalhado:</h4>
-                    <button 
-                      onClick={() => setShowSaveDialog(true)} 
-                      className="save-route-btn"
-                      title="Salvar Roteiro"
-                    >
-                      💾 Salvar
-                    </button>
-                  </div>
-                  {steps.map((step, idx) => (
-                    <div key={idx} className="step-item">
-                      <div className="step-number">{idx + 1}</div>
-                      <div className="step-details">
-                        <div className="step-route">
-                          <strong>De:</strong> {step.start} <br />
-                          <strong>Para:</strong> {step.end}
-                        </div>
-                        <div className="step-info">
-                          <span className="distance">📏 {step.distance}</span>
-                          <span className="duration">⏱️ {step.duration}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              {showAddPlace && (
+                <AddPlace 
+                  onClose={() => setShowAddPlace(false)} 
+                />
               )}
             </div>
-          </div>
+          )}
         </LoadScript>
       )}
     </>

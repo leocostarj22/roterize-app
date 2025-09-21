@@ -28,6 +28,7 @@ const usersCollection = collection(db, 'users');
 const routesCollection = collection(db, 'routes');
 const placesCollection = collection(db, 'places');
 const reviewsCollection = collection(db, 'reviews');
+const tipsCollection = collection(db, 'tips');
 
 // Helper Functions for Database Operations
 
@@ -215,3 +216,70 @@ export const uploadPhoto = async (file, path) => {
 
 export { auth, analytics, db, storage };
 export default app;
+
+// Tips Functions
+export const addTip = async (tipData) => {
+  try {
+    const docRef = await addDoc(tipsCollection, {
+      ...tipData,
+      createdAt: new Date(),
+      likes: 0,
+      views: 0,
+      isVerified: false,
+      photos: tipData.photos || []
+    });
+    console.log('Dica adicionada com ID:', docRef.id);
+    return docRef.id;
+  } catch (error) {
+    console.error('Erro ao adicionar dica:', error);
+    throw error;
+  }
+};
+
+export const getTipsByCategory = async (category, limitCount = 10) => {
+  try {
+    const q = category 
+      ? query(tipsCollection, where('category', '==', category), orderBy('createdAt', 'desc'), limit(limitCount))
+      : query(tipsCollection, orderBy('createdAt', 'desc'), limit(limitCount));
+    
+    const querySnapshot = await getDocs(q);
+    const tips = [];
+    querySnapshot.forEach((doc) => {
+      tips.push({ id: doc.id, ...doc.data() });
+    });
+    return tips;
+  } catch (error) {
+    console.error('Erro ao buscar dicas por categoria:', error);
+    throw error;
+  }
+};
+
+export const getUserTips = async (userId) => {
+  try {
+    const q = query(tipsCollection, where('userId', '==', userId), orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    const tips = [];
+    querySnapshot.forEach((doc) => {
+      tips.push({ id: doc.id, ...doc.data() });
+    });
+    return tips;
+  } catch (error) {
+    console.error('Erro ao buscar dicas do usuário:', error);
+    throw error;
+  }
+};
+
+export const getAllTips = async (limitCount = 20) => {
+  try {
+    const q = query(tipsCollection, orderBy('createdAt', 'desc'), limit(limitCount));
+    const querySnapshot = await getDocs(q);
+    const tips = [];
+    querySnapshot.forEach((doc) => {
+      tips.push({ id: doc.id, ...doc.data() });
+    });
+    return tips;
+  } catch (error) {
+    console.error('Erro ao buscar todas as dicas:', error);
+    throw error;
+  }
+};

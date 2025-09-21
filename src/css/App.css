@@ -1,25 +1,30 @@
+/* Melhorias no container principal */
 .app-container {
-  max-width: 400px;
+  max-width: 100%;
+  width: 100%;
   margin: 0 auto;
   background: #f8f9fa;
   min-height: 100vh;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Diatype', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
+/* Header mais limpo */
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px 20px;
+  padding: 16px 20px;
   background: white;
   border-bottom: 1px solid #e1e5e9;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .header-right {
   display: flex;
   align-items: center;
   gap: 10px;
+  position: relative;
 }
 
 .logomarca {
@@ -69,6 +74,8 @@
 
 .main-content {
   padding: 16px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .location-card {
@@ -104,6 +111,22 @@
 .input-container {
   position: relative;
   margin-bottom: 12px;
+}
+
+/* Inputs mais limpos */
+.input-container input {
+  border: 1px solid #e1e5e9;
+  padding: 12px 16px;
+  font-size: 14px;
+  transition: border-color 0.2s ease;
+  background: white;
+  font-family: 'Diatype', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.input-container input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .input-local {
@@ -176,6 +199,53 @@
   justify-content: center;
   color: white;
   font-size: 10px;
+}
+
+/* Steps do roteiro mais elegantes */
+.steps-container {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  font-family: 'Diatype', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.step-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.step-item:last-child {
+  border-bottom: none;
+}
+
+.step-number {
+  background: #667eea;
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  margin-right: 12px;
+  flex-shrink: 0;
+  font-family: 'Diatype', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.step-details {
+  flex: 1;
+}
+
+.step-details p {
+  margin: 2px 0;
+  font-size: 13px;
+  color: #495057;
 }
 
 .routes-section {
@@ -268,22 +338,48 @@
   font-weight: 500;
 }
 
+/* Botões mais minimalistas */
 .btn-gerar-roteiro {
-  width: 100%;
-  padding: 16px;
-  background: #667eea;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  font-size: 16px;
-  font-weight: 600;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 100%;
   margin-top: 0px;
-  transition: all 0.3s;
+  margin-bottom: 10px;
+  font-family: 'Diatype', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .btn-gerar-roteiro:hover {
-  background: #5a6fd8;
-  transform: translateY(-2px);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Lista de lugares mais limpa */
+.places-list {
+  background: white;
+  border-radius: 8px;
+  margin: 16px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  font-family: 'Diatype', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.place-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.place-item:last-child {
+  border-bottom: none;
 }
 
 .locais-box {
@@ -332,6 +428,28 @@
   height: 16px;
 }
 
+/* Melhorias minimalistas para o mapa */
+.map-container {
+  margin: 20px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: white;
+  width: 100%;
+  min-height: 450px;
+}
+
+.map-location-info {
+  font-size: 12px;
+  color: #666;
+  text-align: center;
+  margin: 8px 0 0 0;
+  padding: 8px 16px;
+  background: #f8f9fa;
+  border-top: 1px solid #eee;
+  font-family: 'Diatype', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
 .mapa-container {
   border-radius: 0px;
   overflow: hidden;
@@ -346,6 +464,17 @@
   height: 100vh;
   font-size: 18px;
   color: #666;
+}
+
+/* Sugestões mais elegantes */
+.suggestions {
+  background: white;
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-top: 4px;
+  overflow: hidden;
+  font-family: 'Diatype', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .suggestions-dropdown {
@@ -363,17 +492,17 @@
 }
 
 .suggestion-item {
-  padding: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
   cursor: pointer;
-  border-bottom: 1px solid #f8f9fa;
+  transition: background-color 0.2s ease;
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  transition: background-color 0.2s ease;
 }
 
 .suggestion-item:hover {
-  background: #f8f9fa;
+  background-color: #f8f9fa;
 }
 
 .suggestion-item:last-child {
@@ -617,7 +746,7 @@
 }
 
 .save-btn {
-  background: #4CAF50;
+  background: #667eea;
   color: white;
 }
 
@@ -626,26 +755,40 @@
 }
 
 /* Botão de salvar no cabeçalho dos steps */
+/* Header do roteiro com título e botão alinhados */
 .steps-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.steps-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #212529;
 }
 
 .save-route-btn {
-  background: #4CAF50;
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
   color: white;
   border: none;
-  padding: 8px 12px;
-  border-radius: 4px;
-  cursor: pointer;
+  padding: 8px 16px;
   font-size: 12px;
-  transition: background-color 0.2s;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
 }
 
 .save-route-btn:hover {
-  background: #45a049;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .add-place-btn {
@@ -666,7 +809,7 @@
   padding: 6px 12px;
   cursor: pointer;
   font-size: 14px;
-  color: #2E7D32;
+  color: #667eea;
   font-weight: 500;
   transition: all 0.2s;
 }
@@ -680,7 +823,7 @@
   padding: 4px 8px;
   cursor: pointer;
   font-size: 13px;
-  color: #2E7D32;
+  color: #667eea;
   font-weight: 500;
   transition: background-color 0.2s;
 }
@@ -704,7 +847,7 @@
   justify-content: center;
   background: #F5F5F5;
   font-size: 12px;
-  color: #2E7D32;
+  color: #667eea;
 }
 
 .profile-name {
@@ -722,19 +865,87 @@
 .add-place-btn:active {
   transform: translateY(0);
 }
+
+/* Melhorias nos seletores de modo - versão mais compacta */
+.mode-selector {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  justify-content: center;
+}
+
+.mode-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 12px;
+  background: white;
+  border: 2px solid #e9ecef;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 60px;
+  position: relative;
+}
+
+.mode-option:hover {
+  border-color: #667eea;
+  background: #f8f9ff;
+}
+
+.mode-option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.mode-option input[type="radio"]:checked + .mode-icon {
+  transform: scale(1.05);
+}
+
+.mode-option input[type="radio"]:checked ~ .mode-text {
+  color: #667eea;
+  font-weight: 600;
+}
+
+.mode-option input[type="radio"]:checked {
+  border-color: #667eea;
+  background: #f8f9ff;
+}
+
+.mode-option:has(input[type="radio"]:checked) {
+  border-color: #667eea;
+  background: #f8f9ff;
+}
+
+.mode-icon {
+  font-size: 18px;
+  margin-bottom: 3px;
+  transition: transform 0.2s ease;
+}
+
+.mode-text {
+  font-size: 11px;
+  font-weight: 500;
+  color: #6c757d;
+  transition: all 0.2s ease;
+}
 .menu-container {
   position: relative;
+  display: inline-block;
 }
 
 .menu-btn {
   background: none;
   border: 2px solid #E0E0E0;
-  width: 32px;
-  height: 32px;
+  border-radius: 4px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #2E7D32;
+  color: #667eea;
   cursor: pointer;
   font-size: 18px;
   font-weight: bold;
@@ -743,52 +954,61 @@
 
 .menu-btn:hover {
   background: #F5F5F5;
-  border-color: #2E7D32;
+  border-color: #667eea;
 }
 
 .dropdown-menu {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 8px);
   right: 0;
   background: white;
   border: 2px solid #E0E0E0;
-  min-width: 180px;
-  z-index: 1000;
-  margin-top: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  min-width: 200px;
+  z-index: 9999;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
 }
 
 .menu-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   width: 100%;
-  padding: 12px 16px;
+  padding: 14px 18px;
   background: none;
   border: none;
   text-align: left;
   font-size: 14px;
+  font-weight: 500;
   color: #333;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
 }
 
 .menu-item:hover {
-  background: #F5F5F5;
+  background: #F8F9FA;
+  color: #667eea;
+}
+
+.menu-item:active {
+  background: #E8F5E8;
 }
 
 .menu-divider {
   height: 1px;
   background: #E0E0E0;
-  margin: 4px 0;
+  margin: 8px 0;
 }
 
 .logout-item {
-  color: #DC3545;
+  color: #D32F2F;
+  border-top: 1px solid #E0E0E0;
 }
 
 .logout-item:hover {
   background: #FFEBEE;
+  color: #C62828;
 }
 
 /* Remover botões antigos do header */
@@ -1224,7 +1444,7 @@
 }
 
 .save-btn {
-  background: #4CAF50;
+  background: #667eea;
   color: white;
 }
 
@@ -1241,7 +1461,7 @@
 }
 
 .save-route-btn {
-  background: #4CAF50;
+  background: #667eea;
   color: white;
   border: none;
   padding: 8px 12px;
@@ -1273,7 +1493,7 @@
   padding: 6px 12px;
   cursor: pointer;
   font-size: 14px;
-  color: #2E7D32;
+  color: #667eea;
   font-weight: 500;
   transition: all 0.2s;
 }
@@ -1287,7 +1507,7 @@
   padding: 4px 8px;
   cursor: pointer;
   font-size: 13px;
-  color: #2E7D32;
+  color: #667eea;
   font-weight: 500;
   transition: background-color 0.2s;
 }
@@ -1311,7 +1531,7 @@
   justify-content: center;
   background: #F5F5F5;
   font-size: 12px;
-  color: #2E7D32;
+  color: #667eea;
 }
 
 .profile-name {
